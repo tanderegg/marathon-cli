@@ -7,12 +7,12 @@ import logging
 
 from marathon import MarathonClient, MarathonApp, MarathonHttpError, MarathonError
 
-STDOUT_URL = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"
-STDOUT_URL_OFFSET = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}"
-STDOUT_URL_OFFSET_LENGTH = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}&length={}"
-STDERR_URL = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"
-STDERR_URL_OFFSET = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}"
-STDERR_URL_OFFSET_LENGTH = "http://{}:5051/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}&length={}"
+STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"
+STDOUT_URL_OFFSET = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}"
+STDOUT_URL_OFFSET_LENGTH = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}&length={}"
+STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"
+STDERR_URL_OFFSET = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}"
+STDERR_URL_OFFSET_LENGTH = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}&length={}"
 
 def get_task_by_version(client, app_id, version):
     tasks = client.list_tasks(app_id=marathon_app_id)
