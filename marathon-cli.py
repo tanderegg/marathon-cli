@@ -52,7 +52,7 @@ if __name__ == '__main__':
     """)
 
     ### Setup Logging
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARN)
 
     print "Parsing JSON app definition..."
     app_definition = MarathonApp.from_json(json.loads(marathon_app))
