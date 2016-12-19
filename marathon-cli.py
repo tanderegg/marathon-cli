@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     try:
         print "Connecting to Marathon..."
-        client = MarathonClient(marathon_urls)
+        client = MarathonClient(marathon_urls, username=marathon_user, password=marathon_password)
     except MarathonError as e:
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     while not done:
         deployments = client.get_app(marathon_app_id).deployments
         if deployments == []:
-            time.sleep(1)
+            time.sleep(3)
             done = True
 
         time.sleep(0.5)
