@@ -3,6 +3,7 @@ import sys
 import json
 import time
 import requests
+import logging
 
 from marathon import MarathonClient, MarathonApp, MarathonHttpError, MarathonError
 
@@ -47,6 +48,9 @@ if __name__ == '__main__':
             }
         }
     """)
+
+    ### Setup Logging
+    logging.basicConfig(level=logging.DEBUG)
 
     print "Parsing JSON app definition..."
     app_definition = MarathonApp.from_json(json.loads(marathon_app))
