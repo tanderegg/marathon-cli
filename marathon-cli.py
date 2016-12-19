@@ -58,6 +58,10 @@ if __name__ == '__main__':
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
 
+    ### Ping the server
+    response = client.ping()
+    print response
+
     print "Deploying application..."
     try:
         app = client.get_app(marathon_app_id)
