@@ -30,6 +30,8 @@ if __name__ == '__main__':
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
     marathon_force = os.getenv("MARATHON_FORCE_DEPLOY", False)
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
+    # This could be 10.0.1.34|https://mesos-agent-1.test.dev,10.0.1.35|https://mesos-agent-2.test.dev...
+    mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
     marathon_app = os.getenv("MARATHON_APP","""
         {
             "id": "/test-app",
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     """)
 
     ### Setup Logging
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     print "Parsing JSON app definition..."
     app_definition = MarathonApp.from_json(json.loads(marathon_app))
@@ -61,13 +63,6 @@ if __name__ == '__main__':
     except MarathonError as e:
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
-
-    # Get the leader
-    print client.get_leader()['leader']
-
-    ### Ping the server
-    response = client.ping()
-    print response
 
     print "Deploying application..."
     try:
@@ -88,7 +83,14 @@ if __name__ == '__main__':
 
     if not new_task:
         print "New task did not start automatically, probably because the application definition did not change, forcing restart..."
-        response = requests.post("http://{}/v2/apps/{}/restart".format(client.get_leader()['leader'], marathon_app_id))
+        for hostname in marathon_urls:
+            try:
+                response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id))
+            except requests.exceptions.ConnectionError:
+                pass
+            else:
+                break
+
         time.sleep(1)
         new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
         print "New version created by restart: {}".format(response.json()["version"])
@@ -99,8 +101,17 @@ if __name__ == '__main__':
     framework_id = marathon_info.framework_id
 
     ### Query Mesos API to discover Container ID
+    hostname = new_task.host
+    mesos_agent_map = {}
+    if mesos_agent_map_string:
+        for mapping in mesos_agent_map_string.split(','):
+            mapping = mapping.split('|')
+            mesos_agent_map[mapping[0]] = mapping[1]
+        hostname = mesos_agent_map[hostname]
+    else:
+        hostname = "http://{}:5051".format(hostname)
 
-    mesos_tasks = requests.get("http://{}:5051/state.json".format(new_task.host))
+    mesos_tasks = requests.get("{}/state.json".format(hostname))
     marathon_framework = None
     container_id = None
 
