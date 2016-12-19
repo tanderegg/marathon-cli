@@ -58,10 +58,6 @@ if __name__ == '__main__':
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
 
-    print "Retrieving Marathon info..."
-    marathon_info = client.get_info()
-    framework_id = marathon_info.framework_id
-
     print "Deploying application..."
     try:
         app = client.get_app(marathon_app_id)
@@ -86,12 +82,18 @@ if __name__ == '__main__':
         new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
         print "New version created by restart: {}".format(response.json()["version"])
 
+    ### Get Framework ID
+
+    marathon_info = client.get_info()
+    framework_id = marathon_info.framework_id
+
     ### Query Mesos API to discover Container ID
 
     mesos_tasks = requests.get("http://{}:5051/state.json".format(new_task.host))
     marathon_framework = None
     container_id = None
 
+    # TODO: User framework_id instead of marathon_framework_name
     for framework in mesos_tasks.json()['frameworks']:
         if framework['name'] == marathon_framework_name:
             marathon_framework = framework
