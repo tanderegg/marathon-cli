@@ -90,7 +90,8 @@ if __name__ == '__main__':
         response = None
         for hostname in marathon_urls:
             try:
-                response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id), auth=auth, verify=False)
+                headers = {"content-type": "application/json"}
+                response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id), auth=auth, verify=False, headers=headers)
             except requests.exceptions.ConnectionError as e:
                 print "Marathon connection error, ignoring: {}".format(e)
                 pass
