@@ -120,6 +120,8 @@ if __name__ == '__main__':
         hostname = "http://{}:5051".format(hostname)
 
     mesos_tasks = requests.get("{}/state.json".format(hostname), auth=auth, verify=False)
+    print mesos_tasks
+    
     marathon_framework = None
     container_id = None
 
