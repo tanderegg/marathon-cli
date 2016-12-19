@@ -97,6 +97,7 @@ if __name__ == '__main__':
             else:
                 break
 
+        print response.json()
         time.sleep(1)
         new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
         print "New version created by restart: {}".format(response.json()["version"])
