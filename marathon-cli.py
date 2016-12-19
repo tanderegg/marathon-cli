@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     try:
         print "Connecting to Marathon..."
-        client = MarathonClient(marathon_urls, username=marathon_user, password=marathon_password)
+        client = MarathonClient(marathon_urls, username=marathon_user, password=marathon_password, verify=False)
     except MarathonError as e:
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
