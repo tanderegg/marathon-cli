@@ -90,7 +90,7 @@ if __name__ == '__main__':
         response = None
         for hostname in marathon_urls:
             try:
-                response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id), auth=auth)
+                response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id), auth=auth, verify=False)
             except requests.exceptions.ConnectionError as e:
                 print "Marathon connection error, ignoring: {}".format(e)
                 pass
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     else:
         hostname = "http://{}:5051".format(hostname)
 
-    mesos_tasks = requests.get("{}/state.json".format(hostname), auth=auth)
+    mesos_tasks = requests.get("{}/state.json".format(hostname), auth=auth, verify=False)
     marathon_framework = None
     container_id = None
 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
         if stdout_length:
             stdout_url = STDOUT_URL_OFFSET_LENGTH.format(new_task.host, new_task.slave_id, framework_id, new_task.id, container_id, stdout_offset, stdout_length)
             stdout_offset += stdout_length
-            stdout = requests.get(stdout_url, auth=auth)
+            stdout = requests.get(stdout_url, auth=auth, verify=False)
             if stdout.json()['data'] != "":
                 stdout_lines = stdout.json()['data'].split('\n')
                 for line in stdout_lines[:-1]:
@@ -169,7 +169,7 @@ if __name__ == '__main__':
         else:
             # This retrieves the current data length, since offset and length are not specified
             stdout_url = STDOUT_URL.format(new_task.host, new_task.slave_id, framework_id, new_task.id, container_id)
-            stdout = requests.get(stdout_url, auth=auth)
+            stdout = requests.get(stdout_url, auth=auth, verify=False)
             stdout_length = stdout.json()['offset']
             stdout_length -= stdout_offset
 
@@ -179,7 +179,7 @@ if __name__ == '__main__':
         if stderr_length:
             stderr_url = STDERR_URL_OFFSET_LENGTH.format(new_task.host, new_task.slave_id, framework_id, new_task.id, container_id, stderr_offset, stderr_length)
             stderr_offset += stderr_length
-            stderr = requests.get(stderr_url, auth=auth)
+            stderr = requests.get(stderr_url, auth=auth, verify=False)
             if stderr.json()['data'] != "":
                 stderr_lines = stderr.json()['data'].split('\n')
                 for line in stderr_lines[:-1]:
@@ -187,7 +187,7 @@ if __name__ == '__main__':
             stderr_length = None
         else:
             stderr_url = STDERR_URL.format(new_task.host, new_task.slave_id, framework_id, new_task.id, container_id)
-            stderr = requests.get(stderr_url, auth=auth)
+            stderr = requests.get(stderr_url, auth=auth, verify=False)
             stderr_length = stderr.json()['offset']
             stderr_length -= stderr_offset
 
