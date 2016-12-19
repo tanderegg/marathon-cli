@@ -58,6 +58,9 @@ if __name__ == '__main__':
         print "Failed to connect to Marathon! {}".format(e)
         sys.exit(1)
 
+    # Get the leader
+    print client.get_leader()['leader']
+
     ### Ping the server
     response = client.ping()
     print response
