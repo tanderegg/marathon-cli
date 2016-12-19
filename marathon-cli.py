@@ -87,16 +87,17 @@ if __name__ == '__main__':
 
     if not new_task:
         print "New task did not start automatically, probably because the application definition did not change, forcing restart..."
+        response = None
         for hostname in marathon_urls:
             try:
                 response = requests.post("{}/v2/apps/{}/restart".format(hostname, marathon_app_id), auth=auth)
-            except requests.exceptions.ConnectionError:
+            except requests.exceptions.ConnectionError as e:
+                print "Marathon connection error, ignoring: {}".format(e)
                 pass
             else:
                 break
 
         time.sleep(1)
-        print response
         new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
         print "New version created by restart: {}".format(response.json()["version"])
 
