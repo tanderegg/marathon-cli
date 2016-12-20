@@ -45,6 +45,17 @@ if __name__ == '__main__':
                 "http://mirrors.gigenet.com/apache/tomcat/tomcat-7/v7.0.73/bin/apache-tomcat-7.0.73.tar.gz",
                 "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/gwt-examples/Calendar.war"
             ],
+            "healthChecks": [
+                {
+                  "protocol": "HTTP",
+                  "path": "/",
+                  "portIndex": 0,
+                  "gracePeriodSeconds": 300,
+                  "intervalSeconds": 60,
+                  "timeoutSeconds": 20,
+                  "maxConsecutiveFailures": 3
+                }
+            ],
             "env": {
                 "toggle": "true"
             }
@@ -80,6 +91,7 @@ if __name__ == '__main__':
     deployments = client.get_app(marathon_app_id).deployments
     time.sleep(0.5)
     new_task = get_task_by_version(client, marathon_app_id, response["version"])
+    deployment_id = response["deploymentId"]
 
     auth = None
     if marathon_user and marathon_password:
@@ -100,6 +112,7 @@ if __name__ == '__main__':
 
         time.sleep(2)
         new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
+        deployment_id = response.json()["deploymentId"]
         print "New version created by restart: {}".format(response.json()["version"])
 
     ### Get Framework ID
@@ -146,12 +159,28 @@ if __name__ == '__main__':
     stderr_offset = 0
     stderr_length = None
     done = False
+    exit_code = 0
 
     while not done:
         deployments = client.get_app(marathon_app_id).deployments
+
         if deployments == []:
             time.sleep(5)
             done = True
+        # TODO: The deployment does not get replaced on failure, but rather
+        # restarts and tries again.  So we need to retrieve the task itself,
+        # and check if it has reached TASK_FAILED status
+        # else:
+        #     deployment_found = False
+        #     for deployment in deployments:
+        #         if deployment.id == deployment_id:
+        #             deployment_found = True
+        #
+        #     # If our original deployment no longer exists, then it failed.
+        #     if not deployment_found:
+        #         time.sleep(5)
+        #         done = True
+        #         exit_code = 1
 
         time.sleep(0.5)
 
@@ -193,3 +222,4 @@ if __name__ == '__main__':
             stderr_length -= stderr_offset
 
     print "All deployments completed sucessfully!"
+    sys.exit(exit_code)
