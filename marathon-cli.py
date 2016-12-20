@@ -8,11 +8,8 @@ import logging
 from marathon import MarathonClient, MarathonApp, MarathonHttpError, MarathonError
 
 STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"
-STDOUT_URL_OFFSET = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}"
-STDOUT_URL_OFFSET_LENGTH = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout&offset={}&length={}"
 STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"
-STDERR_URL_OFFSET = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}"
-STDERR_URL_OFFSET_LENGTH = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr&offset={}&length={}"
+OFFSET = "&offset={}&length={}"
 
 def get_task_by_version(client, app_id, version):
     tasks = client.list_tasks(app_id=marathon_app_id)
@@ -22,6 +19,16 @@ def get_task_by_version(client, app_id, version):
         if task.version == version:
             new_task = task
     return new_task
+
+def print_file_chunk(url, offset, auth):
+    length = requests.get(url, auth=auth, verify=False).json()['offset'] - offset
+    offset_params = OFFSET.format(offset, length)
+    #stdout_url = STDOUT_URL_OFFSET_LENGTH.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id, stdout_offset, stdout_length)
+    data = requests.get(url+offset_params, auth=auth, verify=False).json()['data']
+    if data != "":
+        for line in data.split('\n')[:-1]:
+            print line
+    return offset + length
 
 if __name__ == '__main__':
     marathon_urls = os.getenv("MARATHON_URLS", "http://localhost:8080").split(',')
@@ -62,6 +69,11 @@ if __name__ == '__main__':
         }
     """)
 
+    exit_code = 0
+    auth = None
+    if marathon_user and marathon_password:
+        auth = (marathon_user, marathon_password)
+
     ### Setup Logging
     logging.basicConfig(level=logging.WARN)
 
@@ -73,7 +85,8 @@ if __name__ == '__main__':
         client = MarathonClient(marathon_urls, username=marathon_user, password=marathon_password, verify=False)
     except MarathonError as e:
         print "Failed to connect to Marathon! {}".format(e)
-        sys.exit(1)
+        exit_code = 1
+        sys.exit(exit_code)
 
     print "Deploying application..."
     try:
@@ -89,13 +102,8 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
     deployments = client.get_app(marathon_app_id).deployments
-    time.sleep(0.5)
     new_task = get_task_by_version(client, marathon_app_id, response["version"])
     deployment_id = response["deploymentId"]
-
-    auth = None
-    if marathon_user and marathon_password:
-        auth = (marathon_user, marathon_password)
 
     if not new_task:
         print "New task did not start automatically, probably because the application definition did not change, forcing restart..."
@@ -155,17 +163,14 @@ if __name__ == '__main__':
     ### Stream STDOUT and STDERR from Mesos until the deployment has completed
 
     stdout_offset = 0
-    stdout_length = None
     stderr_offset = 0
-    stderr_length = None
     done = False
-    exit_code = 0
 
     while not done:
         deployments = client.get_app(marathon_app_id).deployments
 
         if deployments == []:
-            time.sleep(5)
+            time.sleep(3)
             done = True
         # TODO: The deployment does not get replaced on failure, but rather
         # restarts and tries again.  So we need to retrieve the task itself,
@@ -182,44 +187,20 @@ if __name__ == '__main__':
         #         done = True
         #         exit_code = 1
 
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
         ### Get STDOUT
 
-        # If stdout_length is set, read in the data then unset it, so the next run will retrieve the new length.
-        if stdout_length:
-            stdout_url = STDOUT_URL_OFFSET_LENGTH.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id, stdout_offset, stdout_length)
-            stdout_offset += stdout_length
-            stdout = requests.get(stdout_url, auth=auth, verify=False)
-            if stdout.json()['data'] != "":
-                stdout_lines = stdout.json()['data'].split('\n')
-                for line in stdout_lines[:-1]:
-                    print "{}".format(line)
-            stdout_length = None
-        else:
-            # This retrieves the current data length, since offset and length are not specified
-            stdout_url = STDOUT_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
-            stdout = requests.get(stdout_url, auth=auth, verify=False)
-            stdout_length = stdout.json()['offset']
-            stdout_length -= stdout_offset
+        stderr_url = STDERR_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
+        stderr_offset = print_file_chunk(stderr_url, stderr_offset, auth)
 
         ### Get STDERR
 
-        # Move the offset forward to the previous length read, if any
-        if stderr_length:
-            stderr_url = STDERR_URL_OFFSET_LENGTH.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id, stderr_offset, stderr_length)
-            stderr_offset += stderr_length
-            stderr = requests.get(stderr_url, auth=auth, verify=False)
-            if stderr.json()['data'] != "":
-                stderr_lines = stderr.json()['data'].split('\n')
-                for line in stderr_lines[:-1]:
-                    print "{}".format(line)
-            stderr_length = None
-        else:
-            stderr_url = STDERR_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
-            stderr = requests.get(stderr_url, auth=auth, verify=False)
-            stderr_length = stderr.json()['offset']
-            stderr_length -= stderr_offset
+        stdout_url = STDOUT_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
+        stdout_offset = print_file_chunk(stdout_url, stdout_offset, auth)
+
+        # Small rate limiting factor
+        time.sleep(0.1)
 
     print "All deployments completed sucessfully!"
     sys.exit(exit_code)
