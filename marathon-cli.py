@@ -109,7 +109,7 @@ if __name__ == '__main__':
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(level=getattr(logging, log_level.upper()))
+    logging.basicConfig(format="%(levelname)-8s: %(message)s", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
@@ -245,7 +245,7 @@ if __name__ == '__main__':
                 mesos_tasks = None
 
                 for host in mesos_master_urls:
-                    response = requests.get(TASK_STATUS_URL.format(host))
+                    response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False)
                     #print response.content
                     if response.status_code == 200:
                         mesos_tasks = response.json()
@@ -321,5 +321,5 @@ if __name__ == '__main__':
 
         exit_code = 1
     else:
-        print "All deployments completed sucessfully!"
+        logging.info("All deployments completed sucessfully!")
     sys.exit(exit_code)
