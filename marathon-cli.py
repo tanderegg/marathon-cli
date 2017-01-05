@@ -109,7 +109,7 @@ if __name__ == '__main__':
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(format="%(levelname)-8s: %(message)s", level=getattr(logging, log_level.upper()))
+    logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
@@ -257,10 +257,9 @@ if __name__ == '__main__':
                         logging.debug("Read timeout from Mesos host {}, trying next host...".format(host))
                         continue
 
-                    #print response.content
                     if response.status_code == 200:
                         mesos_tasks = response.json()
-                        #break
+                        break
 
                 if mesos_tasks:
                     for task in mesos_tasks['tasks']:
