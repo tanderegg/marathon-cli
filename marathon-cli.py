@@ -246,7 +246,7 @@ if __name__ == '__main__':
 
                 for host in mesos_master_urls:
                     try:
-                        response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False)
+                        response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False, timeout=1)
                     except requests.exceptions.ConnectionError:
                         logging.debug("Failed to connect to Mesos host {}, trying next host...".format(host))
                         continue
