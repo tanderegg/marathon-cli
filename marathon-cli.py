@@ -304,6 +304,10 @@ if __name__ == '__main__':
             break
 
     print
+
+    # Wait for logs to print
+    time.sleep(1)
+
     logging.info("End of log stream from Mesos.")
 
     if failed:
