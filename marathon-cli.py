@@ -62,7 +62,7 @@ if __name__ == '__main__':
                                 but that may need to be mapped to a URL.  The
                                 map is defined like:
                                 10.0.1.34|https://mesos.test.dev,...
-    MESOS_MASTERS:              One or more urls for Mesos communication,
+    MESOS_MASTER_URLS:          One or more urls for Mesos communication,
                                 separated by commas.
     """
 
@@ -245,7 +245,12 @@ if __name__ == '__main__':
                 mesos_tasks = None
 
                 for host in mesos_master_urls:
-                    response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False)
+                    try:
+                        response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False)
+                    except requests.exceptions.ConnectionError:
+                        logging.debug("Failed to connect to Mesos host {}, trying next host...".format(host))
+                        continue
+
                     #print response.content
                     if response.status_code == 200:
                         mesos_tasks = response.json()
@@ -258,6 +263,8 @@ if __name__ == '__main__':
                             if task['state'] == "TASK_FAILED":
                                 failed = True
                                 done = True
+                else:
+                    logging.warn("Failed to connect to Mesos API, tasks status not available.")
 
 
             # TODO: The deployment does not get replaced on failure, but rather
