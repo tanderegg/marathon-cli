@@ -250,6 +250,9 @@ if __name__ == '__main__':
                     except requests.exceptions.ConnectionError:
                         logging.debug("Failed to connect to Mesos host {}, trying next host...".format(host))
                         continue
+                    except requests.exceptions.ReadTimeout:
+                        logging.debug("Read timeout from Mesos host {}, trying next host...".format(host))
+                        continue
 
                     #print response.content
                     if response.status_code == 200:
