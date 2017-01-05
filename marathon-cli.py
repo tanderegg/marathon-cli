@@ -17,11 +17,16 @@ def get_task_by_version(client, app_id, version):
     """
     Gets the Mesos task using the Marathon version of the deployment.
     """
+    logging.debug("Attempting to get task for app version {}".format(version))
     tasks = client.list_tasks(app_id=marathon_app_id)
     new_task = None
     for task in tasks:
+        logging.debug("Found task: {}".format(task))
         if task.version == version:
+            logging.debug("Task with version {} found!".format(version))
             new_task = task
+    if not new_task:
+        logging.debug("Failed to find task for version {}".format(version))
     return new_task
 
 def print_file_chunk(url, offset, auth):
@@ -47,7 +52,7 @@ if __name__ == '__main__':
     MARATHON_APP_ID:            The identifier of the application in Marathon.
     MARATHON_USER:              The user to use, if needed.
     MARATHON_PASSWORD:          The password to use, if needed.
-    MARATHON_FORCE:             Use the Force, if necessary (i.e. when a
+    MARATHON_FORCE_DEPLOY:      Use the Force, if necessary (i.e. when a
                                 deployment is failing.)
     MARATHON_FRAMEWORK_NAME:    The name of the framework (usually 'marathon')
     MARATHON_APP:               The JSON formatted app definition.
@@ -68,6 +73,7 @@ if __name__ == '__main__':
     marathon_force = True if os.getenv("MARATHON_FORCE_DEPLOY", "false") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = os.getenv("MARATHON_RETRIES", 3)
+    log_level = os.getenv("MARATHON_LOGLEVEL", 'info')
     marathon_app = os.getenv("MARATHON_APP","""
         {
             "id": "/test-app",
@@ -103,7 +109,8 @@ if __name__ == '__main__':
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig(level=getattr(logging, log_level.upper()))
+    logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
     app_definition = MarathonApp.from_json(json.loads(marathon_app))
@@ -129,6 +136,11 @@ if __name__ == '__main__':
         deployment_id = response['deploymentId']
 
     logging.info("New version deployed: {}".format(version))
+
+    if app_definition.instances == 0:
+        logging.info("Deactivated application by setting instances to 0, deployment complete.")
+        exit_code = 0
+        sys.exit(exit_code)
 
     ### Get newly created Mesos task
 
@@ -157,10 +169,21 @@ if __name__ == '__main__':
             exit_code = 1
             sys.exit(exit_code)
 
-        time.sleep(2)
-        new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
+        attempts = 0
+        while attempts < 10:
+            time.sleep(1)
+            new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
+            if new_task:
+                break
+            attempts += 1
+
+        if not new_task:
+            logging.error("Unable to retrieve new task from Marathon, there may be a communication failure with Mesos.")
+            exit_code = 1
+            sys.exit(exit_code)
+
         deployment_id = response.json()["deploymentId"]
-        print "New version created by restart: {}".format(response.json()["version"])
+        logging.info("New version created by restart: {}".format(response.json()["version"]))
 
     ### Get Framework ID
 
@@ -189,7 +212,7 @@ if __name__ == '__main__':
             break
 
     if not marathon_framework:
-        print "ERROR: Marathon Framework not discoverable via Mesos API."
+        logging.error("Marathon Framework not discoverable via Mesos API.")
 
     for executor in framework['executors']:
         if executor['source'] == new_task.id:
@@ -197,9 +220,10 @@ if __name__ == '__main__':
             break
 
     if not container_id:
-        print "ERROR: Executor for task {} not found.".format(new_task.id)
+        logging.error("Executor for task {} not found.".format(new_task.id))
 
     ### Stream STDOUT and STDERR from Mesos until the deployment has completed
+    logging.info("Streaming logs from Mesos...\n")
 
     stdout_offset = 0
     stderr_offset = 0
@@ -272,8 +296,29 @@ if __name__ == '__main__':
         else:
             break
 
+    print
+    logging.info("End of log stream from Mesos.")
+
     if failed:
-        print "Failure deploying new app configuration, aborting deployment!"
+        logging.warn("Failure deploying new app configuration, aborting deployment!")
+
+        for hostname in marathon_urls:
+            try:
+                headers = {"content-type": "application/json"}
+                response = requests.delete("{}/v2/deployments/{}?force=true".format(
+                    hostname, deployment_id), auth=auth, verify=False,
+                    headers=headers)
+            except requests.exceptions.ConnectionError as e:
+                logging.warn("Marathon connection error, ignoring: {}".format(e))
+                pass
+            else:
+                break
+
+        if response.status_code in [200, 202]:
+            logging.warn("Successfully cancelled failed deployment.")
+        else:
+            logging.error("Failed to force stop deployment: {}, you may need to try again with MARATHON_FORCE_DEPLOY=true, exiting...".format(response.text))
+
         exit_code = 1
     else:
         print "All deployments completed sucessfully!"
