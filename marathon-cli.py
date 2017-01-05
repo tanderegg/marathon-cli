@@ -239,12 +239,15 @@ if __name__ == '__main__':
             deployments = client.get_app(marathon_app_id).deployments
 
             if deployments == []:
+                logging.debug("No deployments remaining, set done=True.")
                 time.sleep(3)
                 done = True
             else:
                 mesos_tasks = None
+                logging.debug("Getting Mesos task state...")
 
                 for host in mesos_master_urls:
+                    logging.debug("Trying Mesos host {}...".format(host))
                     try:
                         response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False, timeout=1)
                     except requests.exceptions.ConnectionError:
@@ -267,7 +270,7 @@ if __name__ == '__main__':
                                 failed = True
                                 done = True
                 else:
-                    logging.warn("Failed to connect to Mesos API, tasks status not available.")
+                    logging.warn("Failed to connect to Mesos API, task status not available.")
 
 
             # TODO: The deployment does not get replaced on failure, but rather
@@ -301,6 +304,7 @@ if __name__ == '__main__':
             time.sleep(0.1)
 
         if failed:
+            logger.warn("Deployment task failed, trying again...")
             attempts += 1
             done = False
         else:
@@ -314,7 +318,7 @@ if __name__ == '__main__':
     logging.info("End of log stream from Mesos.")
 
     if failed:
-        logging.warn("Failure deploying new app configuration, aborting deployment!")
+        logging.error("Failure deploying new app configuration, aborting deployment!")
 
         for hostname in marathon_urls:
             try:
