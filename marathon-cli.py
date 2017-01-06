@@ -145,7 +145,6 @@ if __name__ == '__main__':
     ### Get newly created Mesos task
 
     time.sleep(0.5)
-    #deployments = client.get_app(marathon_app_id).deployments
     new_task = get_task_by_version(client, marathon_app_id, version)
 
     if not new_task:
@@ -270,24 +269,6 @@ if __name__ == '__main__':
                                 done = True
                 else:
                     logging.warn("Failed to connect to Mesos API, task status not available.")
-
-
-            # TODO: The deployment does not get replaced on failure, but rather
-            # restarts and tries again.  So we need to retrieve the task itself,
-            # and check if it has reached TASK_FAILED status
-            # else:
-            #     deployment_found = False
-            #     for deployment in deployments:
-            #         if deployment.id == deployment_id:
-            #             deployment_found = True
-            #
-            #     # If our original deployment no longer exists, then it failed.
-            #     if not deployment_found:
-            #         time.sleep(5)
-            #         done = True
-            #         exit_code = 1
-
-            # time.sleep(0.5)
 
             ### Get STDOUT
 
