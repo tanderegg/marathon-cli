@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     ### Get newly created Mesos task
 
-    time.sleep(0.5)
+    time.sleep(5)
     new_task = get_task_by_version(client, marathon_app_id, version)
 
     if not new_task:
