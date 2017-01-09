@@ -272,7 +272,7 @@ if __name__ == '__main__':
                     for task in mesos_tasks['tasks']:
                         #print task
                         if task['id'] == new_task.id:
-                            if task['state'] == "TASK_FAILED":
+                            if task['state'] in ["TASK_FAILED", "TASK_KILLED", "TASK_FINISHED"]:
                                 failed = True
                                 done = True
                 else:
