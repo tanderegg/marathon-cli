@@ -164,7 +164,7 @@ if __name__ == '__main__':
                 break
 
         if response.status_code != 200:
-            logging.error("Failed to force application restart, exiting...")
+            logging.error("Failed to force application restart, received response {}, exiting...".format(response.text))
             exit_code = 1
             sys.exit(exit_code)
 
