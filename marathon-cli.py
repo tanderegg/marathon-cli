@@ -205,7 +205,15 @@ if __name__ == '__main__':
     container_id = None
 
     # TODO: User framework_id instead of marathon_framework_name
-    for framework in mesos_tasks.json()['frameworks']:
+    try:
+        mesos_tasks = mesos_tasks.json()
+    except ValueError as e:
+        logging.error("Error {} from response {}".format(e, mesos_tasks.text))
+        logging.error("Deployment may have started, but cannot confirm with Mesos.")
+        exit_code = 1
+        sys.exit(exit_code)
+
+    for framework in mesos_tasks['frameworks']:
         if framework['name'] == marathon_framework_name:
             marathon_framework = framework
             break
