@@ -292,7 +292,7 @@ if __name__ == '__main__':
             time.sleep(0.1)
 
         if failed:
-            logger.warn("Deployment task failed, trying again...")
+            logging.warn("Deployment task failed, trying again...")
             attempts += 1
             done = False
         else:
