@@ -232,14 +232,15 @@ if __name__ == '__main__':
     ### Stream STDOUT and STDERR from Mesos until the deployment has completed
     logging.info("Streaming logs from Mesos...\n")
 
-    stdout_offset = 0
-    stderr_offset = 0
-    done = False
-    failed = False
     attempts = 0
 
     # Allow up to marathon_retries tasks to fail
     while attempts < marathon_retries:
+
+        stdout_offset = 0
+        stderr_offset = 0
+        done = False
+        failed = False
 
         # Stream stdout and stderr to the console
         while not done:
@@ -294,7 +295,6 @@ if __name__ == '__main__':
         if failed:
             logging.warn("Deployment task failed, trying again...")
             attempts += 1
-            done = False
         else:
             break
 
