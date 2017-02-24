@@ -109,7 +109,7 @@ if __name__ == '__main__':
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
+    logging.basicConfig(format="%(levelname)-8s [[[%(message)s]]]", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
@@ -274,8 +274,10 @@ if __name__ == '__main__':
                         #print task
                         if task['id'] == new_task.id:
                             if task['state'] in ["TASK_FAILED", "TASK_KILLED", "TASK_FINISHED"]:
+                                logging.warn("task failed: "+repr(task))
                                 failed = True
                                 done = True
+
                 else:
                     logging.warn("Failed to connect to Mesos API, task status not available.")
 
