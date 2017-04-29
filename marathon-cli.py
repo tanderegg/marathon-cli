@@ -200,6 +200,8 @@ if __name__ == '__main__':
     else:
         agent_hostname = "http://{}:5051".format(agent_hostname)
 
+    logging.info('\n\nSSH command:\n\nssh -t {ip} "cd /opt/mesos/slaves/*/frameworks/*/executors/{run}/runs/latest; exec \\$SHELL -l"\n\n'.format(ip=new_task.host, ex=new_task.app_id, run=new_task.id))
+
     mesos_tasks = requests.get("{}/state.json".format(agent_hostname), auth=auth, verify=False)
     marathon_framework = None
     container_id = None
