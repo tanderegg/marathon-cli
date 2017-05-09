@@ -72,7 +72,7 @@ if __name__ == '__main__':
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
     marathon_force = True if os.getenv("MARATHON_FORCE_DEPLOY", "false") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
-    marathon_retries = os.getenv("MARATHON_RETRIES", 3)
+    marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
     log_level = os.getenv("MARATHON_LOGLEVEL", 'info')
     marathon_app = os.getenv("MARATHON_APP","""
         {
