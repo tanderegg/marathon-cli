@@ -109,7 +109,7 @@ if __name__ == '__main__':
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
+    logging.basicConfig(format="%(levelname)-8s [[[%(message)s]]]", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
@@ -200,6 +200,8 @@ if __name__ == '__main__':
     else:
         agent_hostname = "http://{}:5051".format(agent_hostname)
 
+    logging.info('\n\nSSH command:\n\nssh -t {ip} "cd /opt/mesos/slaves/*/frameworks/*/executors/{run}/runs/latest; exec \\$SHELL -l"\n\n'.format(ip=new_task.host, ex=new_task.app_id, run=new_task.id))
+
     mesos_tasks = requests.get("{}/state.json".format(agent_hostname), auth=auth, verify=False)
     marathon_framework = None
     container_id = None
@@ -274,8 +276,10 @@ if __name__ == '__main__':
                         #print task
                         if task['id'] == new_task.id:
                             if task['state'] in ["TASK_FAILED", "TASK_KILLED", "TASK_FINISHED"]:
+                                logging.warn("task failed: "+repr(task))
                                 failed = True
                                 done = True
+
                 else:
                     logging.warn("Failed to connect to Mesos API, task status not available.")
 
