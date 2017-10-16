@@ -169,11 +169,9 @@ if __name__ == '__main__':
             sys.exit(exit_code)
 
         attempts = 0
-        while attempts < 10:
-            time.sleep(1)
+        while not new_task and attempts < 10:
+            time.sleep(2)
             new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
-            if new_task:
-                break
             attempts += 1
 
         if not new_task:
