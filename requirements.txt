@@ -1,2 +1,2 @@
-marathon==0.9.0
+marathon==0.9.3
 requests==2.12.3
