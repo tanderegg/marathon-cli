@@ -4,6 +4,7 @@ import json
 import time
 import requests
 import logging
+import pprint
 
 from marathon import (MarathonClient, MarathonApp, MarathonHttpError,
                       MarathonError)
@@ -34,12 +35,25 @@ def print_file_chunk(url, offset, auth):
     Takes a URL pointing to a Mesos file, and an offset, and prints
     the file contents from offset to the end, then returns the new offset.
     """
-    length = requests.get(url, auth=auth, verify=False).json()['offset'] - offset
+    response = requests.get(url, auth=auth, verify=False)
+    try:
+        length = response.json()['offset'] - offset
+    except ValueError:
+        logging.debug("Invalid JSON response received: {} from URL {}, skipping...".format(response, url))
+        length = 0
+    
     offset_params = OFFSET.format(offset, length)
-    data = requests.get(url+offset_params, auth=auth, verify=False).json()['data']
+    response = requests.get(url+offset_params, auth=auth, verify=False)
+    try:
+        data = response.json()['data']
+    except ValueError:
+        logging.debug("Invalid JSON response received: {} from URL {}, skipping...".format(response, url))
+        data = ""
+    
     if data != "":
         for line in data.split('\n')[:-1]:
-            print(line)
+            logging.info("CONTAINER LOG: {}".format(line))
+
     return offset + length
 
 if __name__ == '__main__':
@@ -103,13 +117,15 @@ if __name__ == '__main__':
     mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
     mesos_master_urls = os.getenv("MESOS_MASTER_URLS", "http://localhost:5050").split(',')
 
+    pp = pprint.PrettyPrinter(depth=2)
+
     exit_code = 0
     auth = None
     if marathon_user and marathon_password:
         auth = (marathon_user, marathon_password)
 
     ### Setup Logging
-    logging.basicConfig(format="%(levelname)-8s [[[%(message)s]]]", level=getattr(logging, log_level.upper()))
+    logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
     logging.info("Parsing JSON app definition...")
@@ -198,7 +214,7 @@ if __name__ == '__main__':
     else:
         agent_hostname = "http://{}:5051".format(agent_hostname)
 
-    logging.info('\n\nSSH command:\n\nssh -t {ip} "cd /opt/mesos/slaves/*/frameworks/*/executors/{run}/runs/latest; exec \\$SHELL -l"\n\n'.format(ip=new_task.host, ex=new_task.app_id, run=new_task.id))
+    logging.info('SSH command: ssh -t {ip} "cd /opt/mesos/slaves/*/frameworks/*/executors/{run}/runs/latest; exec \\$SHELL -l"'.format(ip=new_task.host, ex=new_task.app_id, run=new_task.id))
 
     mesos_tasks = requests.get("{}/state.json".format(agent_hostname), auth=auth, verify=False)
     marathon_framework = None
@@ -268,13 +284,15 @@ if __name__ == '__main__':
                     if response.status_code == 200:
                         mesos_tasks = response.json()
                         break
+                    else:
+                        logging.warn("Response code != 200: {}".format(pp.pprint(response)))
 
                 if mesos_tasks:
                     for task in mesos_tasks['tasks']:
                         #print task
                         if task['id'] == new_task.id:
                             if task['state'] in ["TASK_FAILED", "TASK_KILLED", "TASK_FINISHED"]:
-                                logging.warn("task failed: "+repr(task))
+                                logging.warn("task failed: {}".format(pp.pprint(task)))
                                 failed = True
                                 done = True
 
