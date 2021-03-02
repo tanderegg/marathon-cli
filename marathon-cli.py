@@ -39,7 +39,7 @@ def print_file_chunk(url, offset, auth):
     data = requests.get(url+offset_params, auth=auth, verify=False).json()['data']
     if data != "":
         for line in data.split('\n')[:-1]:
-            print line
+            print(line)
     return offset + length
 
 if __name__ == '__main__':
@@ -300,7 +300,7 @@ if __name__ == '__main__':
         else:
             break
 
-    print
+    print()
 
     # Wait for logs to print
     time.sleep(5)
